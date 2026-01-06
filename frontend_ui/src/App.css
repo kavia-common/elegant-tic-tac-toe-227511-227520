@@ -33,6 +33,7 @@
   width: 1px;
   height: 1px;
   margin: -1px;
+  height: 1px;
   padding: 0;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
@@ -170,6 +171,24 @@
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.01em;
+  display: inline-block;
+  transform-origin: 50% 60%;
+}
+
+.score-value.is-bumping {
+  animation: scoreBump 320ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+@keyframes scoreBump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .score-x .score-value {
@@ -231,23 +250,42 @@
     transform 140ms ease,
     box-shadow 140ms ease,
     border-color 140ms ease,
-    background 140ms ease;
+    background 140ms ease,
+    filter 140ms ease;
   position: relative;
   display: grid;
   place-items: center;
   outline: none;
+  overflow: hidden;
+}
+
+/* subtle shine sweep */
+.ttt-square::before {
+  content: "";
+  position: absolute;
+  inset: -40% -70%;
+  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.65), rgba(255,255,255,0) 60%);
+  transform: translateX(-30%) rotate(18deg);
+  opacity: 0;
+  transition: opacity 160ms ease, transform 260ms ease;
 }
 
 .ttt-square:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.01);
   border-color: rgba(37, 99, 235, 0.22);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.9),
     0 14px 22px rgba(17, 24, 39, 0.10);
 }
 
+.ttt-square:hover:not(:disabled)::before {
+  opacity: 0.55;
+  transform: translateX(10%) rotate(18deg);
+}
+
 .ttt-square:active:not(:disabled) {
-  transform: translateY(0px) scale(0.99);
+  transform: translateY(0px) scale(0.985);
+  filter: saturate(1.03);
 }
 
 .ttt-square:focus-visible {
@@ -265,15 +303,19 @@
   box-shadow:
     0 0 0 4px rgba(245, 158, 11, 0.18),
     0 16px 28px rgba(17, 24, 39, 0.12);
-  animation: pulseWin 900ms ease-in-out infinite alternate;
+  animation: winGlowIn 280ms ease-out;
 }
 
-@keyframes pulseWin {
+@keyframes winGlowIn {
   from {
-    transform: translateY(0);
+    box-shadow:
+      0 0 0 0 rgba(245, 158, 11, 0.0),
+      0 10px 18px rgba(17, 24, 39, 0.08);
   }
   to {
-    transform: translateY(-1px);
+    box-shadow:
+      0 0 0 4px rgba(245, 158, 11, 0.18),
+      0 16px 28px rgba(17, 24, 39, 0.12);
   }
 }
 
@@ -285,13 +327,30 @@
   place-items: center;
 }
 
+/* mark draw-in animation */
+.mark-drawin {
+  animation: markDrawIn 220ms ease-out both;
+}
+
+@keyframes markDrawIn {
+  from {
+    transform: scale(0.86);
+    opacity: 0.35;
+    filter: blur(0.4px);
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
 /* Stylized X */
 .mark-x {
   width: 100%;
   height: 100%;
   position: relative;
   transform: scale(0.9);
-  animation: popIn 180ms ease-out;
 }
 
 .x-stroke {
@@ -326,27 +385,30 @@
     0 10px 22px rgba(245, 158, 11, 0.18),
     0 0 0 3px rgba(245, 158, 11, 0.10);
   background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
-  animation: popIn 180ms ease-out;
-}
-
-@keyframes popIn {
-  from {
-    transform: scale(0.82);
-    opacity: 0.4;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
 
 /* Controls */
 .ttt-controls {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 10px 2px 0;
+}
+
+.ttt-controls-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
-  padding: 10px 2px 0;
+}
+
+.ttt-controls-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2px;
 }
 
 .ttt-button {
@@ -393,6 +455,69 @@
 .ttt-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Toggle (button-based, accessible) */
+.ttt-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ttt-toggle-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 0.72);
+  letter-spacing: 0.01em;
+}
+
+.ttt-toggle-button {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  background: rgba(17, 24, 39, 0.08);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  cursor: pointer;
+  transition: transform 140ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.ttt-toggle-button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-md), var(--ring);
+  border-color: rgba(37, 99, 235, 0.55);
+}
+
+.ttt-toggle-button:active {
+  transform: scale(0.98);
+}
+
+.ttt-toggle-button.is-on {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.ttt-toggle-button.is-off {
+  background: rgba(17, 24, 39, 0.08);
+}
+
+.ttt-toggle-knob {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: white;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.ttt-toggle-button.is-on .ttt-toggle-knob {
+  transform: translate(18px, -50%);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 1), rgba(245, 158, 11, 0.88));
 }
 
 /* Footer */

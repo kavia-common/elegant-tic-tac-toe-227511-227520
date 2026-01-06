@@ -3,8 +3,23 @@ import { Board } from "./Board";
 import { Controls } from "./Controls";
 import { Scoreboard } from "./Scoreboard";
 import { getGameStatus } from "../utils/gameLogic";
+import { burstConfetti } from "../utils/confetti";
+import {
+  createGameSfx,
+  getCelebrationsStorageKey,
+  getSoundStorageKey,
+  loadPreference,
+  savePreference,
+} from "../utils/sound";
 
 const emptyBoard = () => Array(9).fill(null);
+
+const SFX_PATHS = {
+  place: require("../assets/sfx/place.mp3"),
+  invalid: require("../assets/sfx/invalid.mp3"),
+  win: require("../assets/sfx/win.mp3"),
+  draw: require("../assets/sfx/draw.mp3"),
+};
 
 /**
  * PUBLIC_INTERFACE
@@ -13,11 +28,33 @@ const emptyBoard = () => Array(9).fill(null);
  * - status (turn/win/draw)
  * - score tracking across rounds
  * - a11y announcements
+ * - optional polish: sound + celebrations
  */
 export function Game() {
   const [squares, setSquares] = useState(() => emptyBoard());
   const [xIsNext, setXIsNext] = useState(true);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
+
+  // Preferences (persisted)
+  const [soundEnabled, setSoundEnabled] = useState(() =>
+    loadPreference(getSoundStorageKey(), true)
+  );
+  const [celebrationsEnabled, setCelebrationsEnabled] = useState(() =>
+    loadPreference(getCelebrationsStorageKey(), true)
+  );
+
+  useEffect(() => {
+    savePreference(getSoundStorageKey(), soundEnabled);
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    savePreference(getCelebrationsStorageKey(), celebrationsEnabled);
+  }, [celebrationsEnabled]);
+
+  const sfxRef = useRef(null);
+  if (!sfxRef.current) {
+    sfxRef.current = createGameSfx(SFX_PATHS);
+  }
 
   const nextPlayer = xIsNext ? "X" : "O";
   const status = useMemo(
@@ -50,6 +87,17 @@ export function Game() {
     if (scoredRef.current) return;
     scoredRef.current = true;
 
+    // Win / draw sounds (not on move)
+    if (soundEnabled) {
+      if (status.kind === "win") sfxRef.current.win.play(0.45);
+      if (status.kind === "draw") sfxRef.current.draw.play(0.35);
+    }
+
+    // Confetti only on win
+    if (celebrationsEnabled && status.kind === "win") {
+      burstConfetti({ durationMs: 1200, particleCount: 90 });
+    }
+
     setScores((prev) => {
       if (status.kind === "win" && status.winner) {
         return { ...prev, [status.winner]: prev[status.winner] + 1 };
@@ -59,17 +107,30 @@ export function Game() {
       }
       return prev;
     });
-  }, [gameOver, status.kind, status.winner]);
+  }, [gameOver, status.kind, status.winner, soundEnabled, celebrationsEnabled]);
 
   const handlePlay = (index) => {
     if (gameOver) return;
+
+    // If occupied, do nothing (and let Square optionally play invalid SFX).
+    if (squares[index]) return;
+
     setSquares((prev) => {
       if (prev[index]) return prev;
       const next = [...prev];
       next[index] = nextPlayer;
       return next;
     });
+
+    if (soundEnabled) {
+      sfxRef.current.place.play(0.35);
+    }
     setXIsNext((v) => !v);
+  };
+
+  const handleInvalidPlay = () => {
+    if (!soundEnabled) return;
+    sfxRef.current.invalid.play(0.25);
   };
 
   const restartRound = () => {
@@ -82,6 +143,9 @@ export function Game() {
     setXIsNext(true);
     setScores({ X: 0, O: 0, draws: 0 });
   };
+
+  const toggleSound = () => setSoundEnabled((v) => !v);
+  const toggleCelebrations = () => setCelebrationsEnabled((v) => !v);
 
   return (
     <div className="ttt-app">
@@ -120,6 +184,7 @@ export function Game() {
               onPlay={handlePlay}
               disabled={gameOver}
               winningLine={status.line}
+              onInvalidPlay={handleInvalidPlay}
             />
             <div className="ttt-hint" aria-hidden="true">
               Tip: Use Tab to focus a cell, then Enter/Space to play.
@@ -130,6 +195,10 @@ export function Game() {
             onRestartRound={restartRound}
             onResetScores={resetScores}
             disableRestart={squares.every((s) => s === null)}
+            soundEnabled={soundEnabled}
+            celebrationsEnabled={celebrationsEnabled}
+            onToggleSound={toggleSound}
+            onToggleCelebrations={toggleCelebrations}
           />
         </main>
 

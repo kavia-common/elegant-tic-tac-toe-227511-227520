@@ -5,7 +5,7 @@ import { Square } from "./Square";
  * PUBLIC_INTERFACE
  * 3x3 board rendering component.
  */
-export function Board({ squares, onPlay, disabled, winningLine }) {
+export function Board({ squares, onPlay, disabled, winningLine, onInvalidPlay }) {
   return (
     <div className="ttt-board" role="grid" aria-label="Tic-tac-toe board">
       {squares.map((value, index) => {
@@ -23,9 +23,10 @@ export function Board({ squares, onPlay, disabled, winningLine }) {
               index={index}
               value={value}
               onPlay={onPlay}
-              disabled={disabled || Boolean(value)}
+              disabled={disabled}
               isWinning={isWinning}
               ariaLabel={cellLabel}
+              onInvalidPlay={onInvalidPlay}
             />
           </div>
         );
